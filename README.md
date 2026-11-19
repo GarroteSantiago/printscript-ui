@@ -40,13 +40,13 @@ Son variables de build: Vite las fija en el bundle en `npm run build` (o al leva
 | `VITE_OIDC_CLIENT_ID` | — | Client id de la aplicación SPA |
 | `VITE_OIDC_AUDIENCE` | — | Audience de la API. Se manda como parámetro `audience` en el login (lo exige Auth0 para emitir un JWT para la API) |
 | `VITE_OIDC_REDIRECT_URI` | origen de la página | Adónde vuelve el login; también se usa después del logout. Tiene que estar registrada en el proveedor |
-| `VITE_OIDC_SCOPE` | `openid profile email` | Scopes pedidos |
+| `VITE_OIDC_SCOPE` | `openid profile email offline_access` | Scopes pedidos. `offline_access` trae un refresh token, con el que la sesión se renueva sola antes de que venza el access token |
 | `VITE_API_URL` | `/api` | Base de la API pública |
 | `VITE_WS_URL` | sale de `VITE_API_URL` | Base de los WebSocket (`ws://` o `wss://` según la página) |
 | `VITE_FAKE_API` | `false` | `true`: sin login ni backend, datos de prueba en memoria |
 | `DEV_API_PROXY` | `http://localhost` | Solo `npm run dev`: adónde se manda `/api` |
 
-En Auth0 la aplicación tiene que ser de tipo *Single Page Application*, con la URL de la UI en *Allowed Callback URLs*, *Allowed Logout URLs* y *Allowed Web Origins*.
+En Auth0 la aplicación tiene que ser de tipo *Single Page Application*, con la URL de la UI en *Allowed Callback URLs*, *Allowed Logout URLs* y *Allowed Web Origins*. Para el refresh token: *Refresh Token Rotation* prendido en la aplicación y *Allow Offline Access* en la API. Sin refresh token, cuando vence el access token la UI vuelve al login.
 
 ## Servirla con NGINX (compose)
 
@@ -73,6 +73,7 @@ docker build -t printscript-ui --build-arg VITE_OIDC_AUTHORITY=... --build-arg V
 - `UpdateSnippet` acepta cualquier subconjunto de campos; la UI sigue mandando solo `content`.
 - Compartir, guardar y borrar se deshabilitan en los snippets compartidos (`relation = shared`).
 - La ejecución corre la versión guardada del snippet, no lo que hay en el editor.
+- La descarga (US-13) la arma el Snippet Service (`/snippets/{id}/download`): el original o la versión formateada con las reglas del usuario, que existe recién después de cambiar una regla de formato (si no, avisa que todavía no hay).
 
 ## CI
 

@@ -4,6 +4,7 @@ import {TestCase} from "../types/TestCase.ts";
 import {TestCaseResult} from "./queries.tsx";
 import {FileType} from "../types/FileType.ts";
 import {Rule} from "../types/Rule.ts";
+import type {DownloadedFile} from "./api/apiClient.ts";
 
 // Los tests son de un snippet (/snippets/{id}/tests), por eso esas operaciones reciben el snippetId.
 export interface SnippetOperations {
@@ -32,6 +33,8 @@ export interface SnippetOperations {
   removeTestCase(snippetId: string, id: string): Promise<string>
 
   deleteSnippet(id: string): Promise<string>
+
+  downloadSnippet(id: string, formatted: boolean): Promise<DownloadedFile>
 
   testSnippet(snippetId: string, testCase: Partial<TestCase>): Promise<TestCaseResult>
 

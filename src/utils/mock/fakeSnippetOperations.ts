@@ -7,6 +7,7 @@ import {TestCase} from "../../types/TestCase.ts";
 import {TestCaseResult} from "../queries.tsx";
 import {FileType} from "../../types/FileType.ts";
 import {Rule} from "../../types/Rule.ts";
+import type {DownloadedFile} from "../api/apiClient.ts";
 
 const DELAY: number = 1000
 
@@ -100,6 +101,17 @@ export class FakeSnippetOperations implements SnippetOperations {
   testSnippet(): Promise<TestCaseResult> {
     return new Promise(resolve => {
       setTimeout(() => resolve(this.fakeStore.testSnippet()), DELAY)
+    })
+  }
+
+  downloadSnippet(id: string, formatted: boolean): Promise<DownloadedFile> {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const snippet = this.fakeStore.getSnippetById(id)
+        if (!snippet) return reject(new Error("Not found"))
+        const content = formatted ? this.fakeStore.formatSnippet(snippet.content) : snippet.content
+        resolve({filename: `${snippet.name}.${snippet.extension}`, content})
+      }, DELAY)
     })
   }
 

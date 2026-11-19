@@ -22,5 +22,6 @@ export const OIDC = {
   clientId: env.VITE_OIDC_CLIENT_ID ?? "",
   audience: env.VITE_OIDC_AUDIENCE ?? "",
   redirectUri: env.VITE_OIDC_REDIRECT_URI || (typeof window !== "undefined" ? window.location.origin : ""),
-  scope: env.VITE_OIDC_SCOPE || "openid profile email",
+  // offline_access: refresh token, para renovar el access token sin volver al login
+  scope: env.VITE_OIDC_SCOPE || "openid profile email offline_access",
 }

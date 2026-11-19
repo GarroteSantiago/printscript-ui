@@ -11,6 +11,7 @@ export const oidcConfig: AuthProviderProps = {
   response_type: "code",
   scope: OIDC.scope,
   extraQueryParams: OIDC.audience ? {audience: OIDC.audience} : undefined,
+  // Renueva el access token antes de que venza con el refresh token (scope offline_access)
   automaticSilentRenew: true,
   // Saca ?code=...&state=... de la URL después del login
   onSigninCallback: () => window.history.replaceState({}, document.title, window.location.pathname),

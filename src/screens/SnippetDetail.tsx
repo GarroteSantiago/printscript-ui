@@ -4,12 +4,13 @@ import {highlight, languages} from "prismjs";
 import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
 import "prismjs/themes/prism-okaidia.css";
-import {Alert, Box, CircularProgress, IconButton, Tooltip, Typography} from "@mui/material";
+import {Alert, Box, CircularProgress, IconButton, Menu, MenuItem, Tooltip, Typography} from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import {
   useUpdateSnippetById
 } from "../utils/queries.tsx";
-import {useFormatSnippet, useGetSnippetById, useShareSnippet} from "../utils/queries.tsx";
+import {useDownloadSnippet, useFormatSnippet, useGetSnippetById, useShareSnippet} from "../utils/queries.tsx";
+import type {DownloadedFile} from "../utils/api/apiClient.ts";
 import {Bòx} from "../components/snippet-table/SnippetBox.tsx";
 import {BugReport, Delete, Download, Save, Share} from "@mui/icons-material";
 import {ShareSnippetModal} from "../components/snippet-detail/ShareSnippetModal.tsx";
@@ -26,26 +27,40 @@ type SnippetDetailProps = {
   handleCloseModal: () => void;
 }
 
+// Guarda el archivo en el navegador con un link temporal
+const saveFile = ({filename, content}: DownloadedFile) => {
+  const url = URL.createObjectURL(new Blob([content], {type: 'text/plain'}))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  // Revocarla en el mismo tick puede cortar la descarga en algunos navegadores
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+// US-13: el original o la versión formateada con las reglas del usuario, desde el Snippet Service
 const DownloadButton = ({snippet}: { snippet?: Snippet }) => {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const {mutate: download, isLoading} = useDownloadSnippet()
   if (!snippet) return null;
-  const file = new Blob([snippet.content ?? ""], {type: 'text/plain'});
+
+  const handleDownload = (formatted: boolean) => {
+    setAnchor(null)
+    download({id: snippet.id, formatted}, {onSuccess: saveFile})
+  }
 
   return (
-    <Tooltip title={"Download"}>
-      <IconButton sx={{
-        cursor: "pointer"
-      }}>
-        <a download={`${snippet.name}.${snippet.extension}`} target="_blank"
-           rel="noreferrer" href={URL.createObjectURL(file)} style={{
-          textDecoration: "none",
-          color: "inherit",
-          display: 'flex',
-          alignItems: 'center',
-        }}>
+    <>
+      <Tooltip title={"Download"}>
+        <IconButton onClick={(e) => setAnchor(e.currentTarget)} disabled={isLoading}>
           <Download/>
-        </a>
-      </IconButton>
-    </Tooltip>
+        </IconButton>
+      </Tooltip>
+      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+        <MenuItem onClick={() => handleDownload(false)}>Original</MenuItem>
+        <MenuItem onClick={() => handleDownload(true)}>Formatted</MenuItem>
+      </Menu>
+    </>
   )
 }
 

@@ -147,6 +147,25 @@ describe("RealSnippetOperations", () => {
     expect(call()).toMatchObject({url: `/api/snippets/${snippet.id}`, method: "DELETE"})
   })
 
+  it("downloads the original or the formatted file with the name from Content-Disposition", async () => {
+    fetchMock.mockImplementation(async () => new Response("println(1);", {
+      headers: {"Content-Type": "text/plain", "Content-Disposition": 'attachment; filename="hello.ps"'},
+    }))
+
+    expect(await ops.downloadSnippet(snippet.id, true)).toEqual({filename: "hello.ps", content: "println(1);"})
+    expect(call()).toMatchObject({url: `/api/snippets/${snippet.id}/download?formatted=true`, method: "GET"})
+    expect(call().headers.Authorization).toBe("Bearer the-token")
+
+    await ops.downloadSnippet(snippet.id, false)
+    expect(call(1).url).toBe(`/api/snippets/${snippet.id}/download?formatted=false`)
+  })
+
+  it("fails the download with the problem details when there is no formatted version yet", async () => {
+    fetchMock.mockResolvedValue(json({status: 404, detail: "Snippet x has no formatted version yet"}, 404))
+
+    await expect(ops.downloadSnippet(snippet.id, true)).rejects.toThrow("has no formatted version yet")
+  })
+
   it("shares a snippet with a user", async () => {
     fetchMock.mockResolvedValue(json(snippet))
 

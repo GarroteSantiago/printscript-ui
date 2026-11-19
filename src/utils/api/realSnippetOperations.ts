@@ -6,7 +6,7 @@ import {Rule} from "../../types/Rule.ts";
 import {TestCase} from "../../types/TestCase.ts";
 import type {TestCaseResult} from "../queries.tsx";
 import {FileType} from "../../types/FileType.ts";
-import {ApiClient, ApiClientOptions, ApiError} from "./apiClient.ts";
+import {ApiClient, ApiClientOptions, ApiError, DownloadedFile} from "./apiClient.ts";
 
 const DEFAULT_LANGUAGE = "printscript"
 
@@ -89,6 +89,11 @@ export class RealSnippetOperations implements SnippetOperations {
   async removeTestCase(snippetId: string, id: string): Promise<string> {
     await this.api.request<void>("DELETE", `/snippets/${snippetId}/tests/${id}`)
     return id
+  }
+
+  // US-13: el original o la versión formateada que guardó el Snippet Service (404 si todavía no hay)
+  downloadSnippet(id: string, formatted: boolean): Promise<DownloadedFile> {
+    return this.api.requestFile(`/snippets/${id}/download`, `${id}.ps`, {query: {formatted}})
   }
 
   async deleteSnippet(id: string): Promise<string> {

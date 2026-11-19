@@ -37,6 +37,11 @@ const defaultMessages: Record<number, string> = {
   502: "A backend service failed, try again later",
 }
 
+export type DownloadedFile = {
+  filename: string
+  content: string
+}
+
 export type TokenProvider = () => string | undefined | Promise<string | undefined>
 
 export type ApiClientOptions = {
@@ -69,6 +74,14 @@ export class ApiClient {
   async requestText(method: string, path: string, {query}: RequestOptions = {}): Promise<string> {
     const response = await this.send(method, path, query)
     return response.text()
+  }
+
+  // Un archivo: el nombre sale de Content-Disposition (si no viene, el que se pasa)
+  async requestFile(path: string, fallbackName: string, {query}: RequestOptions = {}): Promise<DownloadedFile> {
+    const response = await this.send("GET", path, query)
+    const disposition = response.headers.get("Content-Disposition") ?? ""
+    const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? fallbackName
+    return {filename, content: await response.text()}
   }
 
   private async send(method: string, path: string, query?: RequestOptions["query"], body?: unknown): Promise<Response> {

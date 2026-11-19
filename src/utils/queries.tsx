@@ -7,6 +7,7 @@ import {FileType} from "../types/FileType.ts";
 import {Rule} from "../types/Rule.ts";
 import {useSessionContext} from "../contexts/sessionContext.tsx";
 import {useSnackbarContext} from "../contexts/snackbarContext.tsx";
+import type {DownloadedFile} from "./api/apiClient.ts";
 
 
 // Real (contra /api) o fake según la configuración; ver contexts/sessionProvider.tsx
@@ -157,6 +158,16 @@ export type FormatRequest = {
   content: string
   language?: string
   version?: string
+}
+
+export const useDownloadSnippet = () => {
+  const snippetOperations = useSnippetsOperations()
+  const onError = useErrorSnackbar()
+
+  return useMutation<DownloadedFile, Error, { id: string, formatted: boolean }>(
+      ({id, formatted}) => snippetOperations.downloadSnippet(id, formatted),
+      {onError}
+  );
 }
 
 export const useFormatSnippet = () => {
