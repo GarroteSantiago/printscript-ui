@@ -1,25 +1,30 @@
-import React from 'react';
+import React, {ReactNode} from 'react';
 import App from './App.tsx'
 import './index.css'
 import {createRoot} from "react-dom/client";
+import {AuthProvider} from "react-oidc-context";
 import {PaginationProvider} from "./contexts/paginationProvider.tsx";
 import {SnackbarProvider} from "./contexts/snackbarProvider.tsx";
-import {Auth0Provider} from "@auth0/auth0-react";
+import {AuthSessionProvider, FakeSessionProvider} from "./contexts/sessionProvider.tsx";
+import {FAKE_API} from "./utils/config.ts";
+import {oidcConfig} from "./utils/auth.ts";
+
+const Session = ({children}: { children: ReactNode }) => FAKE_API
+    ? <FakeSessionProvider>{children}</FakeSessionProvider>
+    : (
+        <AuthProvider {...oidcConfig}>
+          <AuthSessionProvider>{children}</AuthSessionProvider>
+        </AuthProvider>
+    )
 
 createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-        <Auth0Provider
-            domain={import.meta.env.VITE_AUTH0_DOMAIN ?? ""}
-            clientId={import.meta.env.VITE_AUTH0_CLIENT_ID ?? ""}
-            authorizationParams={{
-                redirect_uri: window.location.origin
-            }}
-        >
+        <Session>
             <PaginationProvider>
                 <SnackbarProvider>
                     <App/>
                 </SnackbarProvider>
             </PaginationProvider>
-        </Auth0Provider>
+        </Session>
     </React.StrictMode>,
 )

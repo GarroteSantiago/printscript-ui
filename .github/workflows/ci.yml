@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev, prod]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # Los tests de Cypress no corren en CI (necesitan la UI levantada y login)
+      CYPRESS_INSTALL_BINARY: 0
+    steps:
+      - uses: actions/checkout@v4
+
+      # Mismo Node que el dev shell local
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install
+        run: nix develop --command npm ci
+
+      - name: Lint
+        run: nix develop --command npm run lint
+
+      - name: Tests
+        run: nix develop --command npm test
+
+      - name: Build
+        run: nix develop --command npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
