@@ -1,7 +1,8 @@
 import {AppBar, Box, Button, Container, Toolbar, Typography} from "@mui/material";
-import {Code, Rule} from "@mui/icons-material";
+import {Code, Logout, Rule} from "@mui/icons-material";
 import {ReactNode} from "react";
 import {useLocation, useNavigate} from "react-router-dom";
+import {useSessionContext} from "../../contexts/sessionContext.tsx";
 
 type PageType = {
     title: string;
@@ -22,6 +23,7 @@ const pages: PageType[] = [{
 export const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const {userName, logout} = useSessionContext();
     return (
         <AppBar position="static" elevation={0}>
             <Container maxWidth="xl">
@@ -61,6 +63,13 @@ export const Navbar = () => {
                             </Button>
                         ))}
                     </Box>
+                    {userName && <Typography noWrap>{userName}</Typography>}
+                    {logout && (
+                        <Button onClick={logout} sx={{color: 'white', gap: "4px"}}>
+                            <Logout/>
+                            <Typography>Log out</Typography>
+                        </Button>
+                    )}
                 </Toolbar>
             </Container>
         </AppBar>

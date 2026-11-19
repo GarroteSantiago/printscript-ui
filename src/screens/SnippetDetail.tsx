@@ -15,6 +15,7 @@ import {BugReport, Delete, Download, Save, Share} from "@mui/icons-material";
 import {ShareSnippetModal} from "../components/snippet-detail/ShareSnippetModal.tsx";
 import {TestSnippetModal} from "../components/snippet-test/TestSnippetModal.tsx";
 import {Snippet} from "../utils/snippet.ts";
+import {useSnackbarContext} from "../contexts/snackbarContext.tsx";
 import {SnippetExecution} from "./SnippetExecution.tsx";
 import ReadMoreIcon from '@mui/icons-material/ReadMore';
 import {queryClient} from "../App.tsx";
@@ -27,7 +28,7 @@ type SnippetDetailProps = {
 
 const DownloadButton = ({snippet}: { snippet?: Snippet }) => {
   if (!snippet) return null;
-  const file = new Blob([snippet.content], {type: 'text/plain'});
+  const file = new Blob([snippet.content ?? ""], {type: 'text/plain'});
 
   return (
     <Tooltip title={"Download"}>
@@ -58,9 +59,20 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
   const [testModalOpened, setTestModalOpened] = useState(false);
 
   const {data: snippet, isLoading} = useGetSnippetById(id);
-  const {mutate: shareSnippet, isLoading: loadingShare} = useShareSnippet()
+  // Compartir, guardar y borrar son solo del OWNER
+  const isOwner = snippet?.relation !== 'shared'
+  const {createSnackbar} = useSnackbarContext()
+  const {mutate: shareSnippet, isLoading: loadingShare} = useShareSnippet({
+    onSuccess: () => {
+      setShareModalOppened(false)
+      createSnackbar('success', "Snippet shared")
+    }
+  })
   const {mutate: formatSnippet, isLoading: isFormatLoading, data: formatSnippetData} = useFormatSnippet()
-  const {mutate: updateSnippet, isLoading: isUpdateSnippetLoading} = useUpdateSnippetById({onSuccess: () => queryClient.invalidateQueries(['snippet', id])})
+  const {mutate: updateSnippet, isLoading: isUpdateSnippetLoading} = useUpdateSnippetById({onSuccess: () => {
+    queryClient.invalidateQueries(['snippet', id])
+    queryClient.invalidateQueries('listSnippets')
+  }})
 
   useEffect(() => {
     if (snippet) {
@@ -92,7 +104,7 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
             <Typography variant="h4" fontWeight={"bold"}>{snippet?.name ?? "Snippet"}</Typography>
             <Box display="flex" flexDirection="row" gap="8px" padding="8px">
               <Tooltip title={"Share"}>
-                <IconButton onClick={() => setShareModalOppened(true)}>
+                <IconButton onClick={() => setShareModalOppened(true)} disabled={!isOwner}>
                   <Share/>
                 </IconButton>
               </Tooltip>
@@ -102,25 +114,19 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
                 </IconButton>
               </Tooltip>
               <DownloadButton snippet={snippet}/>
-              {/*<Tooltip title={runSnippet ? "Stop run" : "Run"}>*/}
-              {/*  <IconButton onClick={() => setRunSnippet(!runSnippet)}>*/}
-              {/*    {runSnippet ? <StopRounded/> : <PlayArrow/>}*/}
-              {/*  </IconButton>*/}
-              {/*</Tooltip>*/}
-              {/* TODO: we can implement a live mode*/}
               <Tooltip title={"Format"}>
-                <IconButton onClick={() => formatSnippet(code)} disabled={isFormatLoading}>
+                <IconButton onClick={() => formatSnippet({content: code, language: snippet?.language, version: snippet?.version})} disabled={isFormatLoading}>
                   <ReadMoreIcon />
                 </IconButton>
               </Tooltip>
               <Tooltip title={"Save changes"}>
-                <IconButton color={"primary"} onClick={() => updateSnippet({id: id, updateSnippet: {content: code}})} disabled={isUpdateSnippetLoading || snippet?.content === code} >
+                <IconButton color={"primary"} onClick={() => updateSnippet({id: id, updateSnippet: {content: code}})} disabled={!isOwner || isUpdateSnippetLoading || snippet?.content === code} >
                   <Save />
                 </IconButton>
               </Tooltip>
               <Tooltip title={"Delete"}>
-                <IconButton onClick={() => setDeleteConfirmationModalOpen(true)} >
-                  <Delete color={"error"} />
+                <IconButton onClick={() => setDeleteConfirmationModalOpen(true)} disabled={!isOwner}>
+                  <Delete color={isOwner ? "error" : "disabled"} />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -140,16 +146,23 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
                 />
               </Bòx>
             </Box>
+            {!!snippet?.lintViolations?.length && (
+                <Alert severity="warning" sx={{mt: 2}}>
+                  {snippet.lintViolations.map((v, i) => (
+                      <div key={i}>{`${v.line}:${v.column} ${v.message}`}{v.rule ? ` (${v.rule})` : ""}</div>
+                  ))}
+                </Alert>
+            )}
             <Box pt={1} flex={1} marginTop={2}>
               <Alert severity="info">Output</Alert>
-              <SnippetExecution />
+              <SnippetExecution snippetId={id} hasUnsavedChanges={snippet?.content !== code}/>
             </Box>
           </>
         }
         <ShareSnippetModal loading={loadingShare || isLoading} open={shareModalOppened}
                            onClose={() => setShareModalOppened(false)}
                            onShare={handleShareSnippet}/>
-        <TestSnippetModal open={testModalOpened} onClose={() => setTestModalOpened(false)}/>
+        <TestSnippetModal snippetId={id} open={testModalOpened} onClose={() => setTestModalOpened(false)}/>
         <DeleteConfirmationModal open={deleteConfirmationModalOpen} onClose={() => setDeleteConfirmationModalOpen(false)} id={snippet?.id ?? ""} setCloseDetails={handleCloseModal} />
       </Box>
   );

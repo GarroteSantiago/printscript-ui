@@ -13,12 +13,21 @@ export type CreateSnippet = {
   content: string;
   language: string;
   extension: string;
+  // El contrato los acepta; si falta la versión se usa la última del lenguaje
+  description?: string;
+  version?: string;
 }
 
 export type CreateSnippetWithLang = CreateSnippet & { language: string }
 
-export type UpdateSnippet = {
-  content: string
+// El contrato acepta cualquier subconjunto de los campos; la UI solo manda content
+export type UpdateSnippet = Partial<CreateSnippet>
+
+export type Diagnostic = {
+  rule?: string | null;
+  message: string;
+  line: number;
+  column: number;
 }
 
 export type Snippet = CreateSnippet & {
@@ -28,6 +37,11 @@ export type Snippet = CreateSnippet & {
 type SnippetStatus = {
   compliance: ComplianceEnum;
   author: string;
+  authorId?: string;
+  relation?: 'owned' | 'shared';
+  lintViolations?: Diagnostic[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 export type PaginatedSnippets = Pagination & {
   snippets: Snippet[]
@@ -35,4 +49,9 @@ export type PaginatedSnippets = Pagination & {
 
 export const getFileLanguage = (fileTypes: FileType[], fileExt?: string) => {
   return fileExt && fileTypes?.find(x => x.extension == fileExt)
+}
+
+// Última versión del lenguaje según GET /languages
+export const latestVersion = (fileTypes: FileType[] | undefined, language: string): string | undefined => {
+  return fileTypes?.find(x => x.language === language)?.versions?.at(-1)
 }

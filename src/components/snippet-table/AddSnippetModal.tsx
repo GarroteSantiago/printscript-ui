@@ -18,7 +18,7 @@ import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
 import "prismjs/themes/prism-okaidia.css";
 import {Save} from "@mui/icons-material";
-import {CreateSnippet, CreateSnippetWithLang} from "../../utils/snippet.ts";
+import {CreateSnippet, CreateSnippetWithLang, latestVersion} from "../../utils/snippet.ts";
 import {ModalWrapper} from "../common/ModalWrapper.tsx";
 import {useCreateSnippet, useGetFileTypes} from "../../utils/queries.tsx";
 import {queryClient} from "../../App.tsx";
@@ -35,13 +35,21 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
         onSuccess: () => queryClient.invalidateQueries('listSnippets')
     })
     const {data: fileTypes} = useGetFileTypes();
+    const versions = fileTypes?.find((f) => f.language === language)?.versions ?? []
+    const [version, setVersion] = useState<string | undefined>()
+
+    // Al cambiar de lenguaje, la última versión
+    useEffect(() => {
+        setVersion(latestVersion(fileTypes, language))
+    }, [fileTypes, language]);
 
     const handleCreateSnippet = async () => {
         const newSnippet: CreateSnippet = {
             name: snippetName,
             content: code,
             language: language,
-            extension: fileTypes?.find((f) => f.language === language)?.extension ?? "prs"
+            extension: fileTypes?.find((f) => f.language === language)?.extension ?? "prs",
+            version,
         }
         await createSnippet(newSnippet);
         onClose();
@@ -104,6 +112,25 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
                     }
                 </Select>
             </Box>
+            {versions.length > 0 && (
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                }}>
+                    <InputLabel htmlFor="version">Version</InputLabel>
+                    <Select
+                        id="version"
+                        value={version ?? ""}
+                        onChange={(e: SelectChangeEvent<string>) => setVersion(e.target.value)}
+                        sx={{width: '50%'}}
+                    >
+                        {versions.map(v => (
+                            <MenuItem data-testid={`menu-option-version-${v}`} key={v} value={v}>{v}</MenuItem>
+                        ))}
+                    </Select>
+                </Box>
+            )}
             <InputLabel>Code Snippet</InputLabel>
             <Box width={"100%"} sx={{
                 backgroundColor: 'black', color: 'white', borderRadius: "8px",
