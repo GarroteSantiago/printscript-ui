@@ -31,7 +31,7 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
     const [language, setLanguage] = useState(defaultSnippet?.language ?? "printscript");
     const [code, setCode] = useState(defaultSnippet?.content ?? "");
     const [snippetName, setSnippetName] = useState(defaultSnippet?.name ?? "")
-    const {mutateAsync: createSnippet, isLoading: loadingSnippet} = useCreateSnippet({
+    const {mutate: createSnippet, isLoading: loadingSnippet} = useCreateSnippet({
         onSuccess: () => queryClient.invalidateQueries('listSnippets')
     })
     const {data: fileTypes} = useGetFileTypes();
@@ -43,7 +43,7 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
         setVersion(latestVersion(fileTypes, language))
     }, [fileTypes, language]);
 
-    const handleCreateSnippet = async () => {
+    const handleCreateSnippet = () => {
         const newSnippet: CreateSnippet = {
             name: snippetName,
             content: code,
@@ -51,8 +51,8 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
             extension: fileTypes?.find((f) => f.language === language)?.extension ?? "prs",
             version,
         }
-        await createSnippet(newSnippet);
-        onClose();
+        // Si falla, useCreateSnippet muestra el error y el modal queda abierto para corregirlo
+        createSnippet(newSnippet, {onSuccess: onClose});
     }
 
     useEffect(() => {

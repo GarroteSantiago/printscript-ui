@@ -16,7 +16,7 @@ const FormattingRulesList = () => {
   const [rules, setRules] = useState<Rule[] | undefined>([]);
 
   const {data, isLoading} = useGetFormatRules();
-  const {mutateAsync, isLoading: isLoadingMutate} = useModifyFormatRules({
+  const {mutate, isLoading: isLoadingMutate} = useModifyFormatRules({
     onSuccess: () => queryClient.invalidateQueries('formatRules')
   })
 
@@ -88,7 +88,7 @@ const FormattingRulesList = () => {
           )
         })}
       </List>
-      <Button disabled={isLoading} variant={"contained"} onClick={() => mutateAsync(rules ?? [])}>Save</Button>
+      <Button disabled={isLoading} variant={"contained"} onClick={() => mutate(rules ?? [])}>Save</Button>
     </Card>
 
   );

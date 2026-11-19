@@ -16,7 +16,7 @@ const LintingRulesList = () => {
   const [rules, setRules] = useState<Rule[] | undefined>([]);
 
   const {data, isLoading} = useGetLintingRules();
-  const {mutateAsync, isLoading: isLoadingMutate} = useModifyLintingRules({
+  const {mutate, isLoading: isLoadingMutate} = useModifyLintingRules({
     onSuccess: () => queryClient.invalidateQueries('lintingRules')
   })
 
@@ -88,7 +88,7 @@ const LintingRulesList = () => {
           )
         })}
       </List>
-      <Button disabled={isLoading} variant={"contained"} onClick={() => mutateAsync(rules ?? [])}>Save</Button>
+      <Button disabled={isLoading} variant={"contained"} onClick={() => mutate(rules ?? [])}>Save</Button>
     </Card>
 
   );
