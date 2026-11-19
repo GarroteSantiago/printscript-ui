@@ -78,3 +78,5 @@ docker build -t printscript-ui --build-arg VITE_OIDC_AUTHORITY=... --build-arg V
 ## CI
 
 `.github/workflows/ci.yml` corre lint, tests y build con el dev shell de Nix en cada pull request y en cada push a `dev` y `prod`.
+
+`.github/workflows/publish.yml`, en cada push a `dev` y `prod`, publica la imagen en GHCR (`ghcr.io/<owner>/printscript-ui:<rama>` y `:<rama>-<sha>`) y dispara el despliegue de esa rama en `snippet-searcher-infra`. Las variables de build salen de las variables del repo (`AUTH0_DOMAIN`, `AUTH0_SPA_CLIENT_ID`, `AUTH0_AUDIENCE`); el secreto `DEPLOY_PAT` es un token clásico con el scope `repo`.
