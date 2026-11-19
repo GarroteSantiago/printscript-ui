@@ -1,91 +1,79 @@
-# Printscript UI
+# printscript-ui
 
-This is a React project using Vite and Node.js 20. This README will guide you on how to set up and start the project locally.
+Fork de la UI de la cátedra ([austral-ingsis/printscript-ui](https://github.com/austral-ingsis/printscript-ui)) para Snippet Searcher. React + Vite.
 
-## Prerequisites
+Qué agrega sobre el original:
 
-Before you begin, ensure you have met the following requirements:
+- `RealSnippetOperations` (`src/utils/api/`): implementación de `SnippetOperations` contra la API pública (`contracts/snippet-service.openapi.yaml`, en `/api`). Cada pedido lleva `Authorization: Bearer <access token>`. Los errores (Problem Details) se muestran en un snackbar.
+- Login OIDC (Authorization Code + PKCE) con [`react-oidc-context`](https://github.com/authts/react-oidc-context): los endpoints salen del discovery, así que sirve tanto para Auth0 como para el login local de compose. Sin sesión, la app redirige al login.
+- Ejecución interactiva (`src/screens/SnippetExecution.tsx` y `src/utils/execution/`): cliente WebSocket según `contracts/websocket.md`.
+- `FakeSnippetOperations` queda para desarrollar sin backend (`VITE_FAKE_API=true`).
 
-- You have installed Node.js 20 or later
-- You have installed npm
+## Entorno
 
-## Getting Started
+Con Nix (Node 22 y npm):
 
-To get a local copy up and running, follow these steps:
-
-### 1. Fork this Repository in your github account
-
-### 2. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/printscript-ui.git
+```sh
+nix develop          # o direnv allow
+npm ci
 ```
 
-###  3. Navigate to the Project Directory
-```bash
-cd printscript-ui
+Sin Nix alcanza con Node 20 o más nuevo. Si no se van a usar los tests de Cypress, `CYPRESS_INSTALL_BINARY=0 npm ci` evita bajar el binario.
+
+## Comandos
+
+```sh
+npm run dev      # servidor de desarrollo en http://localhost:5173 (proxy de /api al NGINX de compose)
+npm run lint
+npm test         # tests unitarios (Vitest)
+npm run build    # build estático en dist/
+npm run cypress  # tests e2e de la cátedra (con la UI levantada)
 ```
 
-### 4. Install Dependencies
-```bash
-npm install
-```
+## Configuración
 
-### 5. Start the Development Server
+Son variables de build: Vite las fija en el bundle en `npm run build` (o al levantar `npm run dev`). Se leen del entorno o de un `.env` (ver `.env.example`).
 
-```bash
-npm run dev
-```
+| Variable | Default | Para qué |
+|---|---|---|
+| `VITE_OIDC_AUTHORITY` | — | Issuer OIDC. Auth0: `https://<tenant>.us.auth0.com/`. Login local: el issuer del servidor de compose |
+| `VITE_OIDC_CLIENT_ID` | — | Client id de la aplicación SPA |
+| `VITE_OIDC_AUDIENCE` | — | Audience de la API. Se manda como parámetro `audience` en el login (lo exige Auth0 para emitir un JWT para la API) |
+| `VITE_OIDC_REDIRECT_URI` | origen de la página | Adónde vuelve el login; también se usa después del logout. Tiene que estar registrada en el proveedor |
+| `VITE_OIDC_SCOPE` | `openid profile email` | Scopes pedidos |
+| `VITE_API_URL` | `/api` | Base de la API pública |
+| `VITE_WS_URL` | sale de `VITE_API_URL` | Base de los WebSocket (`ws://` o `wss://` según la página) |
+| `VITE_FAKE_API` | `false` | `true`: sin login ni backend, datos de prueba en memoria |
+| `DEV_API_PROXY` | `http://localhost` | Solo `npm run dev`: adónde se manda `/api` |
 
-This will start the Vite development server. You can now open your browser and navigate to http://localhost:5173/ to see the application running.
+En Auth0 la aplicación tiene que ser de tipo *Single Page Application*, con la URL de la UI en *Allowed Callback URLs*, *Allowed Logout URLs* y *Allowed Web Origins*.
 
-## Build production version
+## Servirla con NGINX (compose)
 
-To use this UI in production you should use an optimized and static version, this command will generate this version in `dist` directory:  
+El NGINX de `snippet-searcher-infra` sirve `/` desde `nginx/html` (con `try_files` a `index.html`) y manda `/api` (incluido el WebSocket) al Snippet Service. Para usar esta UI:
 
-```bash
+```sh
+cp .env.example .env    # completar el login (Auth0 o el local)
 npm run build
+rm -rf ../snippet-searcher-infra/nginx/html/* && cp -r dist/* ../snippet-searcher-infra/nginx/html/
 ```
 
-## Cypress
+Como la UI y la API quedan en el mismo host, `VITE_API_URL` y `VITE_WS_URL` no hace falta tocarlas.
 
-To start cypress, make sure that the UI is running and enter: 
+También hay un `Dockerfile` que construye una imagen de NGINX con la UI; las variables se pasan como `--build-arg`:
 
-```bash
-npm run cypress
+```sh
+docker build -t printscript-ui --build-arg VITE_OIDC_AUTHORITY=... --build-arg VITE_OIDC_CLIENT_ID=... --build-arg VITE_OIDC_AUDIENCE=... .
 ```
 
-## Enable Auth0
+## Diferencias con la UI de la cátedra
 
-This application uses https://www.npmjs.com/package/@auth0/auth0-react library for Auth0 integration, to enable it you need to change:
-* Uncomment autologin in [App.tsx](src/App.tsx)
-* Uncomment token retrieval for operations [queries.tsx](src/utils/queries.tsx) 
-* Create a `.env` file with the required env vars:
-```
-VITE_AUTH0_DOMAIN=<domain>
-VITE_AUTH0_CLIENT_ID=<client_id>
-```
+- Los tests son de un snippet (`/snippets/{id}/tests`), así que `getTestCases`, `postTestCase`, `removeTestCase` y `testSnippet` reciben el `snippetId`. `postTestCase` crea (`POST`) o edita (`PUT`) según el test tenga id; `testSnippet` corre un test guardado por su id o, si no está guardado, lo corre sin guardarlo (`/tests/run`).
+- `CreateSnippet` acepta `description` y `version` opcionales: la pantalla de alta deja elegir la versión y, si no viene, el cliente usa la última de `GET /languages`. `formatSnippet` manda el lenguaje y la versión del snippet.
+- `UpdateSnippet` acepta cualquier subconjunto de campos; la UI sigue mandando solo `content`.
+- Compartir, guardar y borrar se deshabilitan en los snippets compartidos (`relation = shared`).
+- La ejecución corre la versión guardada del snippet, no lo que hay en el editor.
 
-If you get 401 loop when getting token:
-* Change application type in Auth0 to "Regular Web Application"
-* In Application Settings > Credentials > "Authentication Method" select "None" 
+## CI
 
-## Start working
-
-1. Fork the Project
-2. Do your magic
-
-## Contributing
-
-1. Create your Feature Branch in this repo (git checkout -b feature/AmazingFeature)
-2. Commit your Changes (git commit -m 'Add some AmazingFeature')
-3. Push to the Branch (git push origin feature/AmazingFeature)
-4. Open a Pull Request
-
-## Tasks
-
-- [ ] Integrate Auth0 UI and private routes
-- [ ] Integrate your endpoints to the UI (Create custom "SnippetOperations")
-- [ ] Dockerize
-- [ ] CI/CD
-- [ ] Sockets*
+`.github/workflows/ci.yml` corre lint, tests y build con el dev shell de Nix en cada pull request y en cada push a `dev` y `prod`.
